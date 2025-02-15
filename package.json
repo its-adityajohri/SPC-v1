@@ -1,0 +1,23 @@
+{
+  "name": "spc-project-v1",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "server",
+    "web",
+    "mobile",
+    "libs/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspaces",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "turbo": "^1.13.4"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
