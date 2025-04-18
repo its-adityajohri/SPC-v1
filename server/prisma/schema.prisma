@@ -1,0 +1,209 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ------------------------------------------------------------------
+// User Models (Authentication & Profiles)
+// ------------------------------------------------------------------
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  username              String    @unique
+  passwordHash          String
+  role                  Role      @default(STUDENT) // STUDENT | TEACHER | ADMIN
+  verified              Boolean   @default(false)
+  otp                   String?
+  otpExpiry             DateTime?
+  passwordResetOTP      String?
+  passwordResetExpiry   DateTime?
+  profile               Profile?
+  // For teacher-related content (if role = TEACHER)
+  assignments           Assignment[]
+  resources             Resource[]
+  quizzes               Quiz[]
+  attendances           Attendance[] 
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Profile {
+  id          String   @id @default(uuid())
+  displayName String
+  bio         String?
+  user        User?    @relation(fields: [userId], references: [id])
+  userId      String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+// ------------------------------------------------------------------
+// Teacher Content Management Models
+// ------------------------------------------------------------------
+
+model Assignment {
+  id           String    @id @default(uuid())
+  teacherId    String
+  teacher      User      @relation(fields: [teacherId], references: [id])
+  title        String
+  description  String
+  subject      String
+  dueDate      DateTime
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  submissions  AssignmentSubmission[]
+}
+
+model Resource {
+  id         String    @id @default(uuid())
+  teacherId  String
+  teacher    User      @relation(fields: [teacherId], references: [id])
+  title      String
+  subject    String
+  url        String    // URL from AWS S3
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Quiz {
+  id         String    @id @default(uuid())
+  teacherId  String
+  teacher    User      @relation(fields: [teacherId], references: [id])
+  title      String
+  subject    String
+  timeLimit  Int       // Time limit in minutes
+  questions  Json      // Store questions as JSON
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  submissions QuizSubmission[]
+}
+
+// ------------------------------------------------------------------
+// Teacher Management & Academic Tracking Models
+// ------------------------------------------------------------------
+
+// Attendance records for a given class on a specific day.
+model Attendance {
+  id         String    @id @default(uuid())
+  teacherId  String
+  teacher    User      @relation(fields: [teacherId], references: [id])
+  classId    String
+  date       DateTime
+  records    Json      // Array of objects: [{ studentId, status }]
+  createdAt  DateTime  @default(now())
+}
+
+// Academic record for each student per subject.
+model StudentRecord {
+  id           String    @id @default(uuid())
+  studentId    String    // Reference to student (User with role STUDENT)
+  classId      String
+  subject      String
+  overallScore Float?
+  remarks      String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([studentId, subject])
+}
+
+// Assignment submissions by students.
+model AssignmentSubmission {
+  id                 String    @id @default(uuid())
+  assignmentId       String
+  assignment         Assignment @relation(fields: [assignmentId], references: [id])
+  studentId          String
+  classId            String
+  score              Float?
+  submissionContent  String?   // Could be text or URL to file stored in S3
+  feedback           String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([assignmentId, studentId])
+}
+
+// Quiz submissions by students.
+model QuizSubmission {
+  id                 String    @id @default(uuid())
+  quizId             String
+  quiz               Quiz      @relation(fields: [quizId], references: [id])
+  studentId          String
+  classId            String
+  score              Float?
+  submissionContent  Json?     // Answers stored as JSON
+  feedback           String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([quizId, studentId])
+}
+
+// ------------------------------------------------------------------
+// AI and Deep Insights Models
+// ------------------------------------------------------------------
+
+// Model to store AI-generated deep insights, such as advanced analytics and trend reports.
+model DeepInsight {
+  id             String    @id @default(uuid())
+  insightType    InsightType
+  entityId       String    // Can refer to a classId, studentId, assignmentId, quizId, etc.
+  insightResult  Json      // Flexible JSON result containing the deep insights
+  createdAt      DateTime  @default(now())
+}
+
+enum InsightType {
+  CLASS_OVERVIEW
+  STUDENT_OVERVIEW
+  ASSIGNMENT
+  QUIZ
+  CUSTOM_QUERY
+  TREND_ANALYSIS
+}
+
+// Model to store AI suggestions generated for improving assignments, quizzes, etc.
+model AISuggestion {
+  id                String    @id @default(uuid())
+  suggestionType    SuggestionType
+  entityId          String    // Reference: could be assignmentId, quizId, etc.
+  suggestionContent Json      // The AI-generated suggestion details
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+enum SuggestionType {
+  ASSIGNMENT
+  RESOURCE
+  QUIZ
+  OVERALL
+}
+
+// Model to periodically capture student progress data (snapshots) for trend analysis.
+model StudentProgressSnapshot {
+  id            String    @id @default(uuid())
+  studentId     String    // Reference to the student (User with role STUDENT)
+  snapshotDate  DateTime  // The date of this snapshot
+  aggregateScore Float?   // Aggregated performance score over a period
+  metrics       Json      // Additional computed metrics (e.g., improvement trend, strengths/weaknesses)
+  createdAt     DateTime  @default(now())
+}
+
+// Optional: Log for custom deep insight queries to the AI pipeline.
+model DeepInsightQueryLog {
+  id         String   @id @default(uuid())
+  queryText  String
+  context    Json?    // Optional contextual data
+  response   Json?    // AI's response stored for reference
+  createdAt  DateTime @default(now())
+}
