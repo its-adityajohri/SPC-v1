@@ -179,6 +179,27 @@ const assignmentAISuggestions = async (req, reply) => {
   }
 };
 
+// POST /api/teacher/assignments/:assignmentId/grade
+async function gradeAssignment(req, reply) {
+  const { assignmentId } = req.params;
+  const { studentId, score, feedback } = req.body;
+  const submission = await prisma.assignmentSubmission.upsert({
+    where: { assignmentId_studentId: { assignmentId, studentId } },
+    update: { score, feedback },
+    create: { assignmentId, studentId, classId: req.body.classId, score, feedback }
+  });
+  // log action
+  await prisma.activityLog.create({
+    data: {
+      userId: req.userId,
+      action: 'GRADE_ASSIGNMENT',
+      metadata: { assignmentId, studentId, score }
+    }
+  });
+  return reply.send({ message: 'Assignment graded', submission });
+}
+
+
 /**
  * ----------------------------
  * RESOURCE HANDLERS
@@ -498,6 +519,7 @@ module.exports = {
   generateAssignmentAI,
   preprocessAssignmentAI,
   assignmentAISuggestions,
+  gradeAssignment,
 
   // Resource Handlers
   uploadResource,

@@ -417,7 +417,7 @@ module.exports = {
   getDeepInsightsData,
 
   // Student Academic Record Management
-  listStudentRecords,
+  listStudentRecords, 
   getStudentRecord,
   updateStudentRecord,
 };

@@ -27,7 +27,13 @@ model User {
   assignments           Assignment[]
   resources             Resource[]
   quizzes               Quiz[]
-  attendances           Attendance[] 
+  attendances           Attendance[]
+  timetables            Timetable[]
+  dashboardSettings     DashboardSetting?
+  announcements         Announcement[]
+  calendarEvents        CalendarEvent[]
+  activityLogs          ActivityLog[]
+  uploadedFiles         FileMeta[]
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }
@@ -206,4 +212,66 @@ model DeepInsightQueryLog {
   context    Json?    // Optional contextual data
   response   Json?    // AI's response stored for reference
   createdAt  DateTime @default(now())
+}
+
+model DashboardSetting {
+  id           String   @id @default(uuid())
+  teacherId    String   @unique
+  teacher      User     @relation(fields: [teacherId], references: [id])
+  preferences  Json     // e.g. { layout: "...", notifications: {...} }
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Announcement {
+  id          String   @id @default(uuid())
+  teacherId   String
+  teacher     User     @relation(fields: [teacherId], references: [id])
+  title       String
+  message     String
+  targetGroup Json     // e.g. { classId: "...", subject: "Math" }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CalendarEvent {
+  id          String   @id @default(uuid())
+  teacherId   String
+  teacher     User     @relation(fields: [teacherId], references: [id])
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Timetable {
+  id          String   @id @default(uuid())
+  teacherId   String
+  teacher     User     @relation(fields: [teacherId], references: [id])
+  classId     String
+  schedule    Json     // e.g. { Monday: [...], Tuesday: […] }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  action      String   // e.g. "CREATE_ASSIGNMENT"
+  metadata    Json?    // extra context
+  timestamp   DateTime @default(now())
+}
+
+model FileMeta {
+  id          String   @id @default(uuid())
+  uploaderId  String
+  uploader    User     @relation(fields: [uploaderId], references: [id])
+  url         String
+  fileType    String   // e.g. "assignment_attachment"
+  metadata    Json?    // original filename, size…
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
